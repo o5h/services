@@ -13,6 +13,12 @@ func main() {
 	e := echo.New()
 
 	e.POST("/user", users.SigninHandler)
+	group := e.Group("/user")
+	{
+		group.Use(access.ValidateTokenMiddleware)
+		group.GET("/details", users.DetailsHandler)
+	}
+
 	e.POST("/access", access.LoginHandler)
 
 	if err := e.Start(":8080"); err != http.ErrServerClosed {

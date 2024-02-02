@@ -24,3 +24,13 @@ func SigninHandler(c echo.Context) error {
 	GetService().CreateUser(user)
 	return nil
 }
+
+func DetailsHandler(c echo.Context) error {
+	username := c.Get("username").(string)
+	user, err := GetService().GetUser(username)
+	if err != nil {
+		return err
+	}
+	user.Password = ""
+	return c.JSON(http.StatusOK, user)
+}
