@@ -17,7 +17,7 @@ func ValidateTokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		if !GetService().IsTokenValid(tokenString) {
-			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid token"})
+			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Token was revoked."})
 		}
 
 		// Parse the token

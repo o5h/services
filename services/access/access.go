@@ -131,7 +131,7 @@ func ConvertSubjectTokenToAccessToken(subjectToken string) (string, error) {
 
 	// Check if the token is valid
 	if !token.Valid {
-		return "", fmt.Errorf("Invalid subject token")
+		return "", fmt.Errorf("invalid subject token")
 	}
 
 	// Extract user information from the subject token
