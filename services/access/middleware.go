@@ -21,7 +21,7 @@ func ValidateTokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		// Parse the token
-		claims := &Claims{}
+		claims := &AccessTokenClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return JWT_KEY, nil
 		})

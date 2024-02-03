@@ -48,7 +48,7 @@ func RefreshTokenHandler(c echo.Context) error {
 
 	// Extract the claims from the old token
 	// Parse the token
-	claims := Claims{}
+	claims := AccessTokenClaims{}
 	_, err := jwt.ParseWithClaims(oldTokenString, &claims, func(token *jwt.Token) (interface{}, error) {
 		return JWT_KEY, nil
 	})

@@ -40,7 +40,7 @@ func GetService() API {
 func (serv *service) CreateToken(username string, timeout time.Duration) (string, error) {
 	expirationTime := time.Now().Add(timeout)
 
-	claims := &Claims{
+	claims := &AccessTokenClaims{
 		Username: username,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
@@ -95,17 +95,19 @@ func (serv *service) RemoveToken(tokenString string) {
 
 // ConvertAccessTokenToSubjectToken converts an access token to a subject token
 func (serv *service) ConvertAccessTokenToSubjectToken(accessToken string) (string, error) {
-	claims := Claims{}
+	claims := AccessTokenClaims{}
 	_, err := jwt.ParseWithClaims(accessToken, &claims, func(token *jwt.Token) (interface{}, error) {
 		return JWT_KEY, nil
 	})
+	if err != nil {
+		return "", fmt.Errorf("error parsing access token: %v", err)
+	}
 
 	// Create a new subject token
 	expirationTime := time.Now().Add(tokenExpirationTimeout)
 	subjectTokenClaims := &SubjectTokenClaims{
-		Username: claims.Username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix()}}
+		Username:       claims.Username,
+		StandardClaims: jwt.StandardClaims{ExpiresAt: expirationTime.Unix()}}
 
 	subjectToken := jwt.NewWithClaims(jwt.SigningMethodHS256, subjectTokenClaims)
 	subjectTokenString, err := subjectToken.SignedString(SUBJECT_TOKEN_KEY)
@@ -114,4 +116,40 @@ func (serv *service) ConvertAccessTokenToSubjectToken(accessToken string) (strin
 	}
 
 	return subjectTokenString, nil
+}
+
+func ConvertSubjectTokenToAccessToken(subjectToken string) (string, error) {
+	// Parse and verify the subject token
+	claims := &SubjectTokenClaims{}
+	token, err := jwt.ParseWithClaims(subjectToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return SUBJECT_TOKEN_KEY, nil
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("error parsing subject token: %v", err)
+	}
+
+	// Check if the token is valid
+	if !token.Valid {
+		return "", fmt.Errorf("Invalid subject token")
+	}
+
+	// Extract user information from the subject token
+	username := claims.Username
+
+	// Create a new access token
+	accessTokenClaims := &AccessTokenClaims{
+		Username: username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(1 * time.Hour).Unix(), // Set an expiration time for the access token
+		},
+	}
+
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessTokenClaims)
+	accessTokenString, err := accessToken.SignedString(JWT_KEY)
+	if err != nil {
+		return "", fmt.Errorf("Error creating access token: %v", err)
+	}
+
+	return accessTokenString, nil
 }

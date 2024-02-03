@@ -2,15 +2,14 @@ package access
 
 import "github.com/golang-jwt/jwt"
 
-// Claims struct represents the JWT claims
-type Claims struct {
+// AccessTokenClaims struct represents the Access JWT claims
+type AccessTokenClaims struct {
 	Username string `json:"username"`
 	jwt.StandardClaims
 }
 
+// AccessTokenClaims struct represents the Subject JWT claims
 type SubjectTokenClaims struct {
-	UserID   string `json:"user_id"`
 	Username string `json:"username"`
-	// Add other claims as needed
 	jwt.StandardClaims
 }
