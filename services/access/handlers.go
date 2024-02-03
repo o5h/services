@@ -5,9 +5,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/o5h/services/services/users"
 )
+
+type AccessResponse struct {
+	AccessToken string `json:"access_token"`
+}
 
 // LoginHandler handles user login and returns a JWT token upon successful authentication
 func LoginHandler(c echo.Context) error {
@@ -23,12 +28,53 @@ func LoginHandler(c echo.Context) error {
 	}
 
 	// Generate JWT token
-	token, err := GetService().CreateToken(user.Username, time.Minute*5)
+	token, err := GetService().CreateToken(user.Username, tokenExpirationTimeout)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Error creating token")
 	}
 
 	// Respond with the generated token
-	_, err = c.Response().Write([]byte(token))
-	return err
+	return c.JSON(http.StatusOK, &AccessResponse{AccessToken: token})
+}
+
+// RefreshTokenHandler handles the refresh token request
+func RefreshTokenHandler(c echo.Context) error {
+	oldTokenString := c.Request().Header.Get("Authorization")
+
+	// Check if the old token is provided
+	if oldTokenString == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Old token not provided"})
+	}
+
+	// Extract the claims from the old token
+	// Parse the token
+	claims := Claims{}
+	_, err := jwt.ParseWithClaims(oldTokenString, &claims, func(token *jwt.Token) (interface{}, error) {
+		return JWT_KEY, nil
+	})
+
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Error extracting old token claims"})
+	}
+
+	// Check if the old token is expired
+
+	expirationTime := time.Unix(claims.ExpiresAt, 0)
+	if time.Now().After(expirationTime) {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Old token has expired"})
+	}
+
+	// Create a new token for the same user
+	newToken, err := GetService().CreateToken(claims.Username, tokenExpirationTimeout)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Error creating new token"})
+	}
+
+	return c.JSON(http.StatusOK, &AccessResponse{AccessToken: newToken})
+}
+
+func InvalidateTokenHandler(c echo.Context) error {
+	tokenString := c.Request().Header.Get("Authorization")
+	GetService().InvalidateToken(tokenString)
+	return c.NoContent(http.StatusOK)
 }

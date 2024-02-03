@@ -16,10 +16,14 @@ func ValidateTokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Unauthorized"})
 		}
 
+		if !GetService().IsTokenValid(tokenString) {
+			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid token"})
+		}
+
 		// Parse the token
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
+			return JWT_KEY, nil
 		})
 
 		if err != nil {

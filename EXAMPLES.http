@@ -1,0 +1,39 @@
+
+@user_name = John Do
+
+### Sign in
+POST http://127.0.0.1:8080/user HTTP/1.1
+content-type: application/json
+
+{
+    "username": "{{ user_name }}",
+    "password": "secret"
+}
+
+### Get user details
+GET http://127.0.0.1:8080/user/details HTTP/1.1
+Authorization: {{access_token}}
+
+
+### Login
+# @name login
+POST http://127.0.0.1:8080/login HTTP/1.1
+content-type: application/json
+
+{
+    "username": "{{user_name}}",
+    "password": "secret"
+}
+
+@access_token={{login.response.body.$.access_token}}
+
+
+### Refresh token
+POST http://127.0.0.1:8080/access/refresh HTTP/1.1
+Authorization: {{ access_token }}
+
+@access_token={{login.response.body.$.access_token}}
+
+### Invalidate token
+DELETE http://127.0.0.1:8080/access/revoke HTTP/1.1
+Authorization: {{access_token}}

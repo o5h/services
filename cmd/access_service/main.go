@@ -19,7 +19,15 @@ func main() {
 		group.GET("/details", users.DetailsHandler)
 	}
 
-	e.POST("/access", access.LoginHandler)
+	e.POST("/login", access.LoginHandler)
+
+	refresh := e.Group("/access")
+	{
+		refresh.Use(access.ValidateTokenMiddleware)
+		refresh.POST("/refresh", access.RefreshTokenHandler)
+		refresh.DELETE("/revoke", access.InvalidateTokenHandler)
+
+	}
 
 	if err := e.Start(":8080"); err != http.ErrServerClosed {
 		log.Fatal(err)

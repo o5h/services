@@ -3,6 +3,7 @@ package access
 import (
 	"encoding/base64"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -12,14 +13,25 @@ import (
 
 type API interface {
 	AuthenticateUser(username, password string) bool
-	CreateToken(string, time.Duration) (string, error)
+	CreateToken(username string, timeout time.Duration) (string, error)
+	InvalidateToken(token string)
+	IsTokenValid(token string) bool
 }
 
 type service struct {
 	userService users.API
+	//TODO: remove expired token
+	tokenBlacklistMutex sync.RWMutex
+	tokenBlacklist      map[string]struct{}
 }
 
-var instance = &service{userService: users.GetService()}
+var (
+	tokenExpirationTimeout = time.Second * 30
+	instance               = &service{
+		userService:    users.GetService(),
+		tokenBlacklist: make(map[string]struct{}),
+	}
+)
 
 func GetService() API {
 	return instance
@@ -35,7 +47,7 @@ func (serv *service) CreateToken(username string, timeout time.Duration) (string
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(JWT_KEY)
 	if err != nil {
 		return "", err
 	}
@@ -56,4 +68,27 @@ func (serv *service) AuthenticateUser(username, password string) bool {
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err == nil && username == user.Username
+}
+
+func (serv *service) InvalidateToken(tokenString string) {
+	serv.tokenBlacklistMutex.Lock()
+	defer serv.tokenBlacklistMutex.Unlock()
+	time.AfterFunc(tokenExpirationTimeout, func() {
+		serv.RemoveToken(tokenString)
+	})
+	serv.tokenBlacklist[tokenString] = struct{}{}
+}
+
+func (serv *service) IsTokenValid(tokenString string) bool {
+	serv.tokenBlacklistMutex.RLock()
+	defer serv.tokenBlacklistMutex.RUnlock()
+	_, exists := serv.tokenBlacklist[tokenString]
+	return !exists
+}
+
+func (serv *service) RemoveToken(tokenString string) {
+	serv.tokenBlacklistMutex.Lock()
+	defer serv.tokenBlacklistMutex.Unlock()
+	delete(serv.tokenBlacklist, tokenString)
+	log.Println("Token removed", tokenString)
 }
