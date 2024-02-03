@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/o5h/services/services/users"
 )
@@ -58,9 +58,7 @@ func RefreshTokenHandler(c echo.Context) error {
 	}
 
 	// Check if the old token is expired
-
-	expirationTime := time.Unix(claims.ExpiresAt, 0)
-	if time.Now().After(expirationTime) {
+	if time.Now().After(claims.ExpiresAt.Time) {
 		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Old token has expired"})
 	}
 

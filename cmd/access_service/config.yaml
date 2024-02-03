@@ -1,0 +1,4 @@
+# config.yaml
+app:
+  name: services
+  port: 8080

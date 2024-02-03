@@ -1,15 +1,23 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/o5h/services/config"
 	"github.com/o5h/services/services/access"
 	"github.com/o5h/services/services/users"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
+
+	conf, err := config.LoadConfig()
+	if err != nil {
+		fmt.Printf("Error loading config: %v\n", err)
+		return
+	}
 	e := echo.New()
 
 	e.POST("/user", users.RegisterHandler)
@@ -28,7 +36,7 @@ func main() {
 
 	}
 
-	if err := e.Start(":8080"); err != http.ErrServerClosed {
+	if err := e.Start(fmt.Sprintf(":%d", conf.App.Port)); err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }

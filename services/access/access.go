@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/o5h/services/services/users"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -38,14 +38,11 @@ func GetService() API {
 }
 
 func (serv *service) CreateToken(username string, timeout time.Duration) (string, error) {
-	expirationTime := time.Now().Add(timeout)
 
 	claims := &AccessTokenClaims{
 		Username: username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(timeout)}}}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(JWT_KEY)
 	if err != nil {
@@ -106,8 +103,8 @@ func (serv *service) ConvertAccessTokenToSubjectToken(accessToken string) (strin
 	// Create a new subject token
 	expirationTime := time.Now().Add(tokenExpirationTimeout)
 	subjectTokenClaims := &SubjectTokenClaims{
-		Username:       claims.Username,
-		StandardClaims: jwt.StandardClaims{ExpiresAt: expirationTime.Unix()}}
+		Username:         claims.Username,
+		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(expirationTime)}}
 
 	subjectToken := jwt.NewWithClaims(jwt.SigningMethodHS256, subjectTokenClaims)
 	subjectTokenString, err := subjectToken.SignedString(SUBJECT_TOKEN_KEY)
@@ -140,15 +137,15 @@ func ConvertSubjectTokenToAccessToken(subjectToken string) (string, error) {
 	// Create a new access token
 	accessTokenClaims := &AccessTokenClaims{
 		Username: username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(1 * time.Hour).Unix(), // Set an expiration time for the access token
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)), // Set an expiration time for the access token
 		},
 	}
 
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessTokenClaims)
 	accessTokenString, err := accessToken.SignedString(JWT_KEY)
 	if err != nil {
-		return "", fmt.Errorf("Error creating access token: %v", err)
+		return "", fmt.Errorf("error creating access token: %v", err)
 	}
 
 	return accessTokenString, nil
