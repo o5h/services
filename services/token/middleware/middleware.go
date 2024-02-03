@@ -1,10 +1,11 @@
-package access
+package middleware
 
 import (
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"github.com/o5h/services/services/token"
 )
 
 func ValidateTokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
@@ -16,14 +17,14 @@ func ValidateTokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Unauthorized"})
 		}
 
-		if !GetService().IsTokenValid(tokenString) {
+		if !token.IsRevoked(tokenString) {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Token was revoked."})
 		}
 
 		// Parse the token
-		claims := &AccessTokenClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return JWT_KEY, nil
+		claims := &token.AccessClaims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+			return token.JWT_KEY, nil
 		})
 
 		if err != nil {

@@ -1,13 +1,15 @@
-package access
+package token
 
 import (
 	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/o5h/services/services/token"
+	"github.com/o5h/services/services/user"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
-	"github.com/o5h/services/services/users"
 )
 
 type AccessResponse struct {
@@ -16,19 +18,19 @@ type AccessResponse struct {
 
 // LoginHandler handles user login and returns a JWT token upon successful authentication
 func LoginHandler(c echo.Context) error {
-	var user users.User
+	var u user.User
 	// Parse the request body to get username and password
-	if err := json.NewDecoder(c.Request().Body).Decode(&user); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(&u); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Please provide valid credentials")
 	}
 
 	// Authenticate the user
-	if !GetService().AuthenticateUser(user.Username, user.Password) {
+	if !user.Authenticate(u.Username, u.Password) {
 		return echo.NewHTTPError(http.StatusBadRequest, "Please provide valid credentials")
 	}
 
 	// Generate JWT token
-	token, err := GetService().CreateToken(user.Username, tokenExpirationTimeout)
+	token, err := token.Create(u.Username)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Error creating token")
 	}
@@ -48,9 +50,9 @@ func RefreshTokenHandler(c echo.Context) error {
 
 	// Extract the claims from the old token
 	// Parse the token
-	claims := AccessTokenClaims{}
-	_, err := jwt.ParseWithClaims(oldTokenString, &claims, func(token *jwt.Token) (interface{}, error) {
-		return JWT_KEY, nil
+	claims := token.AccessClaims{}
+	_, err := jwt.ParseWithClaims(oldTokenString, &claims, func(t *jwt.Token) (interface{}, error) {
+		return token.JWT_KEY, nil
 	})
 
 	if err != nil {
@@ -63,7 +65,7 @@ func RefreshTokenHandler(c echo.Context) error {
 	}
 
 	// Create a new token for the same user
-	newToken, err := GetService().CreateToken(claims.Username, tokenExpirationTimeout)
+	newToken, err := token.Create(claims.Username)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Error creating new token"})
 	}
@@ -71,8 +73,8 @@ func RefreshTokenHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, &AccessResponse{AccessToken: newToken})
 }
 
-func InvalidateTokenHandler(c echo.Context) error {
+func Revoke(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
-	GetService().InvalidateToken(tokenString)
+	token.Revoke(tokenString)
 	return c.NoContent(http.StatusOK)
 }

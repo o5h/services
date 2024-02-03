@@ -1,12 +1,14 @@
-package access
+package token
 
 import (
 	"crypto/rand"
 	"encoding/base64"
 )
 
-var JWT_KEY = []byte("your-secret-key")
-var SUBJECT_TOKEN_KEY = []byte("your-secret-key")
+var (
+	JWT_KEY           = []byte("your-secret-key")
+	SUBJECT_TOKEN_KEY = []byte("your-secret-key")
+)
 
 // GenerateRandomKey generates random secret key for JWT.
 // For JWT, a key length of 256 bits (32 bytes) or more is commonly recommended.
