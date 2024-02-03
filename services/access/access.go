@@ -2,6 +2,7 @@ package access
 
 import (
 	"encoding/base64"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -19,8 +20,7 @@ type API interface {
 }
 
 type service struct {
-	userService users.API
-	//TODO: remove expired token
+	userService         users.API
 	tokenBlacklistMutex sync.RWMutex
 	tokenBlacklist      map[string]struct{}
 }
@@ -91,4 +91,27 @@ func (serv *service) RemoveToken(tokenString string) {
 	defer serv.tokenBlacklistMutex.Unlock()
 	delete(serv.tokenBlacklist, tokenString)
 	log.Println("Token removed", tokenString)
+}
+
+// ConvertAccessTokenToSubjectToken converts an access token to a subject token
+func (serv *service) ConvertAccessTokenToSubjectToken(accessToken string) (string, error) {
+	claims := Claims{}
+	_, err := jwt.ParseWithClaims(accessToken, &claims, func(token *jwt.Token) (interface{}, error) {
+		return JWT_KEY, nil
+	})
+
+	// Create a new subject token
+	expirationTime := time.Now().Add(tokenExpirationTimeout)
+	subjectTokenClaims := &SubjectTokenClaims{
+		Username: claims.Username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix()}}
+
+	subjectToken := jwt.NewWithClaims(jwt.SigningMethodHS256, subjectTokenClaims)
+	subjectTokenString, err := subjectToken.SignedString(SUBJECT_TOKEN_KEY)
+	if err != nil {
+		return "", fmt.Errorf("error creating subject token: %v", err)
+	}
+
+	return subjectTokenString, nil
 }

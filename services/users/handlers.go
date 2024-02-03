@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func SigninHandler(c echo.Context) error {
+func RegisterHandler(c echo.Context) error {
 	var user User
 
 	if err := json.NewDecoder(c.Request().Body).Decode(&user); err != nil {

@@ -12,15 +12,14 @@ import (
 func main() {
 	e := echo.New()
 
-	e.POST("/user", users.SigninHandler)
+	e.POST("/user", users.RegisterHandler)
 	group := e.Group("/user")
 	{
 		group.Use(access.ValidateTokenMiddleware)
 		group.GET("/details", users.DetailsHandler)
 	}
 
-	e.POST("/login", access.LoginHandler)
-
+	e.POST("/access/login", access.LoginHandler)
 	refresh := e.Group("/access")
 	{
 		refresh.Use(access.ValidateTokenMiddleware)
