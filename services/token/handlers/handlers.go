@@ -73,7 +73,7 @@ func RefreshTokenHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, &AccessResponse{AccessToken: newToken})
 }
 
-func Revoke(c echo.Context) error {
+func RevokeHandler(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
 	token.Revoke(tokenString)
 	return c.NoContent(http.StatusOK)

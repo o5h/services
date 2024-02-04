@@ -6,8 +6,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/o5h/services/config"
-	"github.com/o5h/services/services/access"
-	"github.com/o5h/services/services/users"
+	tokenHandlers "github.com/o5h/services/services/token/handlers"
+	"github.com/o5h/services/services/token/middleware"
+	userHandlers "github.com/o5h/services/services/user/handlers"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,21 +20,18 @@ func main() {
 		return
 	}
 	e := echo.New()
-
-	e.POST("/user", users.RegisterHandler)
-	group := e.Group("/user")
+	public := e.Group("")
 	{
-		group.Use(access.ValidateTokenMiddleware)
-		group.GET("/details", users.DetailsHandler)
+		public.POST("/user", userHandlers.RegisterHandler)
+		public.POST("/access/login", tokenHandlers.LoginHandler)
 	}
 
-	e.POST("/access/login", access.LoginHandler)
-	refresh := e.Group("/access")
+	protected := e.Group("")
 	{
-		refresh.Use(access.ValidateTokenMiddleware)
-		refresh.POST("/refresh", access.RefreshTokenHandler)
-		refresh.DELETE("/revoke", access.InvalidateTokenHandler)
-
+		protected.Use(middleware.ValidateTokenMiddleware)
+		protected.GET("/user/details", userHandlers.DetailsHandler)
+		protected.POST("/access/refresh", tokenHandlers.RefreshTokenHandler)
+		protected.DELETE("/access/revoke", tokenHandlers.RevokeHandler)
 	}
 
 	if err := e.Start(fmt.Sprintf(":%d", conf.App.Port)); err != http.ErrServerClosed {
