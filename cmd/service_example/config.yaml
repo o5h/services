@@ -1,0 +1,8 @@
+# config.yaml
+app:
+  name: services
+  address: :8080
+
+db:
+  url: postgres://service-user:service-password@127.0.0.1:5432/service-example
+

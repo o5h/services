@@ -6,13 +6,21 @@ import (
 	"github.com/spf13/viper"
 )
 
+var ContextKey = struct{ name string }{name: "config"}
+
 type Config struct {
-	App AppConfiguration
+	App          AppConfiguration
+	DB           DBConfiguration
+	BuildVersion string
+	BuildDate    string
 }
 
 type AppConfiguration struct {
-	Name string
-	Port int
+	Name    string
+	Address string
+}
+type DBConfiguration struct {
+	URL string
 }
 
 func LoadConfig() (*Config, error) {

@@ -37,3 +37,12 @@ Authorization: {{ access_token }}
 ### Invalidate token
 DELETE http://127.0.0.1:8080/access/revoke HTTP/1.1
 Authorization: {{access_token}}
+
+## Internal
+
+### Config
+GET http://127.0.0.1:8080/internal/config HTTP/1.1
+
+
+### Shutdown
+GET http://127.0.0.1:8080/internal/shutdown HTTP/1.1
