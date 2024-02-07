@@ -8,11 +8,16 @@ import (
 	"syscall"
 
 	"github.com/o5h/services/config"
+	"github.com/o5h/services/db"
 )
 
 func Init(cfg *config.Config) (context.Context, context.CancelFunc) {
 	rootContext := context.WithValue(context.Background(), config.ContextKey, cfg)
 	ctx, cancel := context.WithCancel(rootContext)
+	cancel = func() {
+		db.Close()
+		cancel()
+	}
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)

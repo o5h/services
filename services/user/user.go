@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 
+	"github.com/o5h/services/db"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,22 +19,30 @@ type User struct {
 	Password string `json:"password"`
 }
 
-var users map[string]User = make(map[string]User)
-
 func Create(u User) error {
-	if _, ok := users[u.Username]; ok {
-		return ErrorUserAlreadyExists
-	}
-	users[u.Username] = u
-	log.Println("User ", u.Username, "registered")
+	tx := db.BeginTx()
+	defer db.Commit(tx)
+
+	id := db.UserInsert(tx, &db.User{
+		UserName:     u.Username,
+		PasswordHash: u.Password})
+
+	log.Println("User ", u.Username, id, "registered")
 	return nil
 }
 
 func Get(username string) (User, error) {
-	if user, ok := users[username]; ok {
-		return user, nil
+	tx := db.BeginReadOnlyTx()
+	defer db.Commit(tx)
+
+	u := db.UserGetByUserName(tx, username)
+	if u == nil {
+		return User{}, ErrorUserNotFound
 	}
-	return User{}, ErrorUserNotFound
+	return User{
+			Username: u.UserName,
+			Password: u.PasswordHash},
+		nil
 }
 
 func Authenticate(username, password string) bool {

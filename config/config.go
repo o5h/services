@@ -20,7 +20,9 @@ type AppConfiguration struct {
 	Address string
 }
 type DBConfiguration struct {
-	URL string
+	URL     string
+	MaxOpen int
+	MaxIdle int
 }
 
 func LoadConfig() (*Config, error) {

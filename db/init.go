@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"log"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/o5h/services/config"
@@ -13,13 +14,21 @@ import (
 //go:embed migrations/*.sql
 var migrationsDir embed.FS
 
-var db *sql.DB
+var (
+	ctx context.Context
+	db  *sql.DB
+)
 
-func Init(ctx context.Context) {
-	cfg := ctx.Value(config.ContextKey).(*config.Config)
+func Init(c context.Context) {
+	ctx = c
+	cfg := c.Value(config.ContextKey).(*config.Config).DB
 	var err error
-	db, err = sql.Open("pgx", cfg.DB.URL)
+	db, err = sql.Open("pgx", cfg.URL)
 	must(err)
+
+	db.SetMaxOpenConns(cfg.MaxOpen)
+	db.SetMaxIdleConns(cfg.MaxIdle)
+
 	updateSchema()
 }
 
@@ -32,5 +41,46 @@ func updateSchema() {
 func must(err error) {
 	if err != nil {
 		panic(err)
+	}
+}
+
+func mustRow[T any](t *T, err error) *T {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		} else {
+			must(err)
+		}
+	}
+	return t
+}
+
+func Close() { db.Close() }
+
+func BeginTx() *sql.Tx {
+	log.Println("Begin Tx")
+	tx, err := db.BeginTx(ctx, nil)
+	must(err)
+	return tx
+}
+
+func BeginReadOnlyTx() *sql.Tx {
+	log.Println("Begin Tx")
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	must(err)
+	return tx
+}
+
+func Commit(tx *sql.Tx) {
+	if r := recover(); r != nil {
+		log.Println("Rollback Tx", r)
+		tx.Rollback()
+	} else {
+		if err := tx.Commit(); err != nil {
+			log.Println("Rollback Tx")
+			tx.Rollback()
+		} else {
+			log.Println("Commited Tx")
+		}
 	}
 }

@@ -5,4 +5,6 @@ app:
 
 db:
   url: postgres://service-user:service-password@127.0.0.1:5432/service-example
+  maxOpen: 5
+  maxIdle: 5
 
